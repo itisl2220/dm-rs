@@ -6,10 +6,7 @@ fn main() -> Result<(), anyhow::Error> {
         Ok(obj) => {
             let ver = obj.ver()?;
             println!("ver:{:?}", ver);
-            let v = obj.reg(
-                "mh84909b3bf80d45c618136887775ccc90d27d7".to_string(),
-                "mmqnvy80ddz0ec7".to_string(),
-            )?;
+            let v = obj.reg("mh84909b3bf80d45c618136887775ccc90d27d7", "mmqnvy80ddz0ec7")?;
             println!("v:{:?}", v);
         }
         Err(e) => {

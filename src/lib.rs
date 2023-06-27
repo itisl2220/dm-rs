@@ -1,9 +1,4 @@
-use std::{
-    iter::once,
-    mem::ManuallyDrop,
-    os::windows::{ffi::OsStrExt, prelude::OsStringExt},
-    ptr,
-};
+use std::{iter::once, ops::DerefMut, os::windows::ffi::OsStrExt, ptr};
 use windows::{
     core::{ComInterface, IUnknown, BSTR, GUID, PCWSTR},
     Win32::System::Com::{
@@ -22,11 +17,12 @@ struct MyDispatchDriver {
     obj: IDispatch,
 }
 impl MyDispatchDriver {
-    pub fn new(obj: IDispatch) -> Self {
-        Self { obj }
+    pub fn new(obj: &IDispatch) -> Self {
+        Self { obj: obj.clone() }
     }
 
-    pub fn get_idof_name(&self, lpsz: PCWSTR, disp_id: &mut i32) -> () {
+    pub fn get_idof_name(&self, lpsz: &str, disp_id: &mut i32) -> () {
+        let lpsz = PCWSTR::from_raw(encode_wide(lpsz).as_ptr());
         return unsafe {
             let _ = self.obj.GetIDsOfNames(ptr::null(), &lpsz, 1, 0, disp_id);
         };
@@ -72,7 +68,7 @@ impl MyDispatchDriver {
                 &GUID::zeroed(),
                 0,
                 windows::Win32::System::Com::DISPATCH_METHOD,
-                &dis as *const DISPPARAMS,
+                &dis,
                 pvar_ret,
                 None,
                 None,
@@ -92,79 +88,59 @@ impl DmSoft {
     }
 
     pub fn ver(&self) -> Result<String, anyhow::Error> {
-        let mut disp_id: i32 = 0;
-        let mut pvar_ret = VARIANT::default();
-        let driver = MyDispatchDriver::new(self.obj.clone());
-        driver.get_idof_name(PCWSTR::from_raw(encode_wide("Ver").as_ptr()), &mut disp_id);
-        driver.invoke0(disp_id, Some(&mut pvar_ret));
-        let pvar_ret = unsafe { &pvar_ret.Anonymous.Anonymous.Anonymous.bstrVal };
-        let pvar_ret = ManuallyDrop::<BSTR>::into_inner(pvar_ret.clone());
-        let pvar_ret = std::ffi::OsString::from_wide(&*pvar_ret.as_wide())
-            .into_string()
-            .unwrap_or(format!(""));
-        Ok(pvar_ret)
-    }
-
-    pub fn reg(&self, code: String, ver: String) -> Result<i32, anyhow::Error> {
         unsafe {
-            let mut pn = VARIANT::default();
-            let code_v: VARIANT = VARIANT::default();
-            code_v.Anonymous.Anonymous.to_owned().Anonymous.bstrVal =
-                ManuallyDrop::new(BSTR::from(&code));
-            let ver_v: VARIANT = VARIANT::default();
-            ver_v.Anonymous.Anonymous.to_owned().Anonymous.bstrVal =
-                ManuallyDrop::new(BSTR::from(&ver));
-            let pn = &mut pn as *mut _ as *mut VARIANT;
             let mut disp_id: i32 = 0;
             let mut pvar_ret = VARIANT::default();
-            let driver = MyDispatchDriver::new(self.obj.clone());
-            driver.get_idof_name(PCWSTR::from_raw(encode_wide("Reg").as_ptr()), &mut disp_id);
-            driver.invoke_n(disp_id, pn, 2, Some(&mut pvar_ret));
-            let pvar_ret = pvar_ret.Anonymous.Anonymous.Anonymous.lVal;
-            println!("pvar_ret: {:?}", pvar_ret);
+            let driver = MyDispatchDriver::new(&self.obj);
+            driver.get_idof_name("Ver", &mut disp_id);
+            driver.invoke0(disp_id, Some(&mut pvar_ret));
+            let result = &pvar_ret.Anonymous.Anonymous.Anonymous.bstrVal;
+            Ok(result.to_string())
+        }
+    }
 
-            Ok(pvar_ret)
+    pub fn enable_pic_cache(&self) -> Result<String, anyhow::Error> {
+        unsafe {
+            let mut disp_id: i32 = 0;
+            let mut pvar_ret = VARIANT::default();
+
+            let mut pn: [VARIANT; 1] = [VARIANT::default()];
+            pn[0].Anonymous.Anonymous.deref_mut().Anonymous.llVal = 1;
+
+            let driver = MyDispatchDriver::new(&self.obj);
+            driver.get_idof_name("EnablePicCache", &mut disp_id);
+            driver.invoke_n(disp_id, pn.as_mut_ptr(), 1, Some(&mut pvar_ret));
+            let result = &pvar_ret.Anonymous.Anonymous.Anonymous.bstrVal;
+            Ok(result.to_string())
+        }
+    }
+
+    pub fn reg(&self, code: &str, ver: &str) -> Result<i32, anyhow::Error> {
+        unsafe {
+            let mut pn: [VARIANT; 2] = [VARIANT::default(), VARIANT::default()];
+            *pn[0].Anonymous.Anonymous.deref_mut().Anonymous.bstrVal = BSTR::from(code);
+            *pn[0].Anonymous.Anonymous.deref_mut().Anonymous.bstrVal = BSTR::from(ver);
+            let mut disp_id: i32 = -1;
+            let mut pvar_ret = VARIANT::default();
+            let driver = MyDispatchDriver::new(&self.obj);
+            driver.get_idof_name("Reg", &mut disp_id);
+            driver.invoke_n(disp_id, pn.as_mut_ptr(), 2, Some(&mut pvar_ret));
+            Ok(pvar_ret.Anonymous.Anonymous.Anonymous.lVal)
         }
     }
 
     pub fn set_row_gap_no_dict(&self, row_gap: i64) -> Result<i32, anyhow::Error> {
         unsafe {
-            let v: VARIANT = VARIANT::default();
-            v.Anonymous.Anonymous.to_owned().Anonymous.llVal = row_gap;
-            let mut pn = [v, VARIANT::default()];
-            let pn = &mut pn as *mut _ as *mut VARIANT;
+            let mut pn = [VARIANT::default()];
+            (*pn[0].Anonymous.Anonymous).Anonymous.llVal = row_gap;
             let mut disp_id: i32 = 0;
             let mut pvar_ret = VARIANT::default();
-            let driver = MyDispatchDriver::new(self.obj.clone());
-            driver.get_idof_name(
-                PCWSTR::from_raw(encode_wide("SetRowGapNoDict").as_ptr()),
-                &mut disp_id,
-            );
-            driver.invoke_n(disp_id, pn, 1, Some(&mut pvar_ret));
+            let driver = MyDispatchDriver::new(&self.obj);
+            driver.get_idof_name("SetRowGapNoDict", &mut disp_id);
+            driver.invoke_n(disp_id, pn.as_mut_ptr(), 1, Some(&mut pvar_ret));
             let pvar_ret = pvar_ret.Anonymous.Anonymous.Anonymous.lVal;
 
             return Ok(pvar_ret);
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
-
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        unsafe { CoInitializeEx(None, COINIT_MULTITHREADED).unwrap() };
-        let obj = DmSoft::new();
-        match obj {
-            Ok(obj) => {
-                println!("obj:{:?}", obj);
-            }
-            Err(e) => {
-                println!("{:?}", e);
-            }
         }
     }
 }
