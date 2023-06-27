@@ -12,6 +12,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.71"
+variant-rs = { path = "../variant-rs" }
 # win-idispatch = "0.3.0"
 windows = { version = "0.48.0", features = [
     "Win32_System_Com",
@@ -22,13 +23,5 @@ windows = { version = "0.48.0", features = [
     "Win32_UI_WindowsAndMessaging",
     "Win32_System_Ole",
 ] }
-# winapi = { version = "0.3.9", features = [
-#     "impl-default",
-#     "combaseapi",
-#     "unknwnbase",
-#     "winerror",
-#     "winnls",
-#     "wtypesbase",
-#     "objbase",
-# ] }
+# winapi = { version = "0.3.9", features = ["impl-default", "combaseapi", "unknwnbase", "winerror", "winnls", "wtypesbase", "objbase", "oleauto"] }
 # winsafe = "0.0.16"
