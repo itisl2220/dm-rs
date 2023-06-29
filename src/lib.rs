@@ -81,8 +81,151 @@ impl DmSoft {
         Ok(res)
     }
 
+    pub fn set_path(&self, path: &str) -> DmResult<i32> {
+        let res = self.obj.call("SetPath", vec![path.into()])?;
+        Ok(res.expect_i32())
+    }
+
+    // 设置字库
+    pub fn set_dict(&self, index: i64, file: &str) -> DmResult<i32> {
+        let res = self.obj.call("SetDict", vec![index.into(), file.into()])?;
+        Ok(res.expect_i32())
+    }
+
     pub fn set_row_gap_no_dict(&self, row_gap: i64) -> DmResult<i32> {
         let res = self.obj.call("SetRowGapNoDict", vec![row_gap.into()])?;
         Ok(res.expect_i32())
+    }
+
+    // 设置窗口大小
+    pub fn set_window_size(&self, hwnd: i64, width: i64, height: i64) -> DmResult<i32> {
+        let res = self.obj.call(
+            "SetWindowSize",
+            vec![hwnd.into(), width.into(), height.into()],
+        )?;
+        Ok(res.expect_i32())
+    }
+
+    // 设置窗口客户区域大小
+    pub fn set_client_size(&self, hwnd: i64, width: i64, height: i64) -> DmResult<i32> {
+        let res = self.obj.call(
+            "SetClientSize",
+            vec![hwnd.into(), width.into(), height.into()],
+        )?;
+        Ok(res.expect_i32())
+    }
+
+    // 高级窗口绑定
+    pub fn bind_window_ex(
+        &self,
+        hwnd: i64,
+        display: &str,
+        mouse: &str,
+        keypad: &str,
+        public: &str,
+        mode: i64,
+    ) -> DmResult<i32> {
+        let res = self.obj.call(
+            "BindWindowEx",
+            vec![
+                hwnd.into(),
+                display.into(),
+                mouse.into(),
+                keypad.into(),
+                public.into(),
+                mode.into(),
+            ],
+        )?;
+        Ok(res.expect_i32())
+    }
+
+    // 文字识别
+    pub fn ocr(
+        &self,
+        x1: i64,
+        y1: i64,
+        x2: i64,
+        y2: i64,
+        color: &str,
+        sim: f64,
+    ) -> DmResult<String> {
+        let res = self.obj.call(
+            "Ocr",
+            vec![
+                x1.into(),
+                y1.into(),
+                x2.into(),
+                y2.into(),
+                color.into(),
+                sim.into(),
+            ],
+        )?;
+        Ok(res.expect_string().to_string())
+    }
+
+    // 高级找图
+    pub fn find_pic_ex(
+        &self,
+        x1: i64,
+        y1: i64,
+        x2: i64,
+        y2: i64,
+        pic_name: &str,
+        delta_color: &str,
+        sim: f64,
+        dir: i64,
+    ) -> DmResult<String> {
+        let res = self.obj.call(
+            "FindPicEx",
+            vec![
+                x1.into(),
+                y1.into(),
+                x2.into(),
+                y2.into(),
+                pic_name.into(),
+                delta_color.into(),
+                sim.into(),
+                dir.into(),
+            ],
+        )?;
+        Ok(res.expect_string().to_string())
+    }
+
+    // 移动鼠标
+    pub fn move_to(&self, x: i64, y: i64) -> DmResult<i32> {
+        let res = self.obj.call("MoveTo", vec![x.into(), y.into()])?;
+        Ok(res.expect_i32())
+    }
+
+    // 鼠标左键单击
+    pub fn left_click(&self) -> DmResult<i32> {
+        let res = self.obj.call("LeftClick", vec![])?;
+        Ok(res.expect_i32())
+    }
+
+    // 查找指定区域内的颜色,颜色格式"RRGGBB-DRDGDB",注意,和按键的颜色格式相反
+    pub fn find_color_e(
+        &self,
+        x1: i64,
+        y1: i64,
+        x2: i64,
+        y2: i64,
+        color: &str,
+        sim: f64,
+        dir: i64,
+    ) -> DmResult<String> {
+        let res = self.obj.call(
+            "FindColorE",
+            vec![
+                x1.into(),
+                y1.into(),
+                x2.into(),
+                y2.into(),
+                color.into(),
+                sim.into(),
+                dir.into(),
+            ],
+        )?;
+        Ok(res.expect_string().to_string())
     }
 }
