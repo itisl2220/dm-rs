@@ -2,11 +2,14 @@ use std::{iter::once, os::windows::ffi::OsStrExt};
 use variant_rs::dispatch::IDispatchError;
 use variant_rs::dispatch::IDispatchExt;
 
+use windows::core::PCWSTR;
+use windows::Win32::Foundation::{HWND, RECT};
+use windows::Win32::System::Com::IDispatch;
+use windows::Win32::UI::WindowsAndMessaging::GetClientRect;
 use windows::{
-    core::{ComInterface, IUnknown, PCWSTR},
+    core::{ComInterface, IUnknown},
     Win32::System::Com::{
-        CLSIDFromProgID, CoCreateInstance, CoInitializeEx, IDispatch, CLSCTX_ALL,
-        COINIT_MULTITHREADED,
+        CLSIDFromProgID, CoCreateInstance, CoInitializeEx, CLSCTX_ALL, COINIT_MULTITHREADED,
     },
 };
 fn encode_wide(string: impl AsRef<std::ffi::OsStr>) -> Vec<u16> {
@@ -104,6 +107,16 @@ impl DmSoft {
             vec![hwnd.into(), width.into(), height.into()],
         )?;
         Ok(res.expect_i32())
+    }
+
+    // 获取窗口客户区域大小
+    pub fn get_client_size(&self, hwnd: i64) -> DmResult<(i32, i32)> {
+        let mut rect = RECT::default();
+        let res = unsafe { GetClientRect(HWND(hwnd as isize), &mut rect) };
+        if res.0 == 0 {
+            return Err(DmError::WindowsError(windows::core::Error::from_win32()));
+        }
+        Ok((rect.right, rect.bottom))
     }
 
     // 设置窗口客户区域大小
