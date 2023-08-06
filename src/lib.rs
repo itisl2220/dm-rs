@@ -68,6 +68,12 @@ impl DmSoft {
         }
     }
 
+    pub fn find_window(&self, class: &str, title: &str) -> DmResult<i32> {
+        let res = self.obj.call("FindWindow", vec![class.into(), title.into()])?;
+        let res: i32 = res.expect_i32();
+        Ok(res)
+    }
+
     pub fn ver(&self) -> DmResult<String> {
         let res = self.obj.call("Ver", vec![])?;
         Ok(res.expect_string().to_string())
@@ -88,7 +94,11 @@ impl DmSoft {
         let res = self.obj.call("SetPath", vec![path.into()])?;
         Ok(res.expect_i32())
     }
-
+    // 设置是否弹出错误信息，默认打开
+    pub fn set_show_error_msg(&self, is_show: i64) ->DmResult<i32> {
+        let res = self.obj.call("SetShowErrorMsg", vec![is_show.into()])?;
+        Ok(res.expect_i32())
+    }
     // 设置字库
     pub fn set_dict(&self, index: i64, file: &str) -> DmResult<i32> {
         let res = self.obj.call("SetDict", vec![index.into(), file.into()])?;
@@ -207,6 +217,18 @@ impl DmSoft {
     // 移动鼠标
     pub fn move_to(&self, x: i64, y: i64) -> DmResult<i32> {
         let res = self.obj.call("MoveTo", vec![x.into(), y.into()])?;
+        Ok(res.expect_i32())
+    }
+
+    // 鼠标左键按下
+    pub fn left_down(&self) -> DmResult<i32> {
+        let res = self.obj.call("LeftDown", vec![])?;
+        Ok(res.expect_i32())
+    }
+
+    // 鼠标左键弹起
+    pub fn left_up(&self) -> DmResult<i32> {
+        let res = self.obj.call("LeftUp", vec![])?;
         Ok(res.expect_i32())
     }
 
